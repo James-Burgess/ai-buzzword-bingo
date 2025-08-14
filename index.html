@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Conference Buzzword Bingo</title>
+    <meta name="description" content="Play Buzzword Bingo at your AI conference! Click tiles as you hear buzzwords and race to get five in a row.">
+    <style>
+      :root {
+        --bg: #0f1120;
+        --panel: #161a2b;
+        --panel-2: #1b2035;
+        --text: #e8ecff;
+        --muted: #a5b1d8;
+        --accent: #6ea8fe;
+        --accent-2: #9b72ff;
+        --ok: #2dd4bf;
+        --warn: #f59e0b;
+        --danger: #ef4444;
+        --tile: #101426;
+        --tile-border: #27304d;
+        --tile-selected: #21314f;
+        --tile-win: #0b5c32;
+        --shadow: 0 8px 24px rgba(0,0,0,.35);
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f6f7fb;
+          --panel: #ffffff;
+          --panel-2: #f4f6ff;
+          --text: #0b1220;
+          --muted: #445075;
+          --accent: #2b6fff;
+          --accent-2: #7a4bff;
+          --ok: #178f7c;
+          --warn: #a36a05;
+          --danger: #b22121;
+          --tile: #ffffff;
+          --tile-border: #e4e8f5;
+          --tile-selected: #eaf1ff;
+          --tile-win: #d5f4e9;
+          --shadow: 0 10px 24px rgba(0,0,0,.08);
+        }
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        color: var(--text);
+        background: radial-gradient(1200px 700px at 10% -10%, #1d2340 0%, transparent 60%),
+                    radial-gradient(900px 600px at 110% 0%, #2a1d55 0%, transparent 55%),
+                    var(--bg);
+      }
+
+      .app {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px;
+        display: grid;
+        gap: 20px;
+        grid-template-rows: auto 1fr auto;
+        min-height: 100%;
+      }
+
+      header {
+        background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+        border: 1px solid var(--tile-border);
+        border-radius: 16px;
+        padding: 16px 18px;
+        box-shadow: var(--shadow);
+        display: grid;
+        gap: 12px;
+      }
+
+      .titlebar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .title {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .title h1 {
+        margin: 0;
+        font-size: clamp(22px, 3.4vw, 32px);
+        letter-spacing: 0.3px;
+      }
+
+      .subtitle {
+        margin: 0;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        appearance: none;
+        border: 1px solid var(--tile-border);
+        background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0));
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: transform .04s ease, background .2s ease, border-color .2s ease, box-shadow .2s ease;
+      }
+      .btn:hover { transform: translateY(-1px); }
+      .btn:active { transform: translateY(0); }
+      .btn.primary {
+        border-color: color-mix(in oklab, var(--accent) 40%, var(--tile-border));
+        background: linear-gradient(180deg, color-mix(in oklab, var(--accent) 25%, transparent), transparent);
+        box-shadow: 0 1px 0 color-mix(in oklab, var(--accent) 30%, transparent) inset;
+      }
+      .btn.warn {
+        border-color: color-mix(in oklab, var(--warn) 40%, var(--tile-border));
+        background: linear-gradient(180deg, color-mix(in oklab, var(--warn) 20%, transparent), transparent);
+      }
+
+      main {
+        display: grid;
+        gap: 16px;
+      }
+
+      .board-wrap {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 1fr 300px;
+      }
+      @media (max-width: 980px) {
+        .board-wrap { grid-template-columns: 1fr; }
+      }
+
+      .board-panel {
+        background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+        border: 1px solid var(--tile-border);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: var(--shadow);
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+      }
+
+      .tile {
+        position: relative;
+        display: grid;
+        place-items: center;
+        text-align: center;
+        min-height: 90px;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1px solid var(--tile-border);
+        background: linear-gradient(180deg, var(--tile) 0%, color-mix(in oklab, var(--tile), black 8%) 100%);
+        color: var(--text);
+        font-weight: 700;
+        cursor: pointer;
+        user-select: none;
+        transition: background .2s ease, border-color .2s ease, transform .06s ease, box-shadow .2s ease;
+      }
+
+      .tile small {
+        display: block;
+        opacity: .9;
+        font-weight: 600;
+        font-size: 11px;
+        letter-spacing: .25px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+
+      .tile:hover { transform: translateY(-1px); }
+      .tile:active { transform: translateY(0); }
+      .tile[aria-pressed="true"] {
+        background: linear-gradient(180deg, var(--tile-selected) 0%, color-mix(in oklab, var(--tile-selected), black 8%) 100%);
+        border-color: color-mix(in oklab, var(--accent) 30%, var(--tile-border));
+        box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 20%, transparent) inset;
+      }
+      .tile.free {
+        background: linear-gradient(180deg, color-mix(in oklab, var(--accent-2) 10%, var(--tile)) 0%, color-mix(in oklab, var(--accent-2) 20%, var(--tile)) 100%);
+      }
+      .tile.win {
+        outline: 2px solid color-mix(in oklab, var(--ok) 60%, transparent);
+        box-shadow: 0 0 0 1px color-mix(in oklab, var(--ok) 35%, transparent) inset;
+      }
+
+      .sidebar { display: grid; gap: 12px; align-content: start; }
+      .legend {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 6px 10px;
+        align-items: center;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .legend .dot {
+        width: 14px; height: 14px; border-radius: 50%;
+        border: 1px solid var(--tile-border);
+        background: var(--tile);
+      }
+      .legend .dot.selected { background: color-mix(in oklab, var(--accent) 25%, var(--tile)); }
+      .legend .dot.win { background: color-mix(in oklab, var(--ok) 40%, var(--tile)); }
+
+      .status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+        border: 1px solid var(--tile-border);
+        border-radius: 14px;
+        padding: 12px 14px;
+        color: var(--muted);
+      }
+      .status .bingo {
+        color: var(--ok);
+        font-weight: 800;
+        letter-spacing: .5px;
+      }
+
+      .celebrate {
+        animation: pulse 1200ms ease-in-out 2;
+      }
+      @keyframes pulse {
+        0% { filter: saturate(100%); }
+        40% { filter: saturate(140%) drop-shadow(0 0 18px color-mix(in oklab, var(--ok) 30%, transparent)); }
+        100% { filter: saturate(100%); }
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px; height: 1px;
+        padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header id="header">
+        <div class="titlebar">
+          <div class="title">
+            <h1>AI Conference Buzzword Bingo</h1>
+            <p class="subtitle">Click tiles as you hear them. First to five in a row wins.</p>
+          </div>
+          <div class="controls">
+            <button id="shuffleBtn" class="btn primary" type="button">New card</button>
+            <button id="resetBtn" class="btn" type="button">Reset marks</button>
+            <button id="fullscreenBtn" class="btn" type="button">Fullscreen</button>
+            <button id="printBtn" class="btn" type="button" title="Print or save as PDF">Print</button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <div class="board-wrap">
+          <section class="board-panel" aria-label="Bingo board">
+            <div id="board" class="board" role="grid" aria-rowcount="5" aria-colcount="5"></div>
+          </section>
+
+          <aside class="board-panel sidebar">
+            <div>
+              <strong>How to play</strong>
+              <p class="subtitle" style="margin-top:6px">Mark a tile when the word is said on stage. Get five in a row horizontally, vertically, or diagonally.</p>
+            </div>
+            <div class="legend">
+              <span class="dot"></span><span>Unmarked</span>
+              <span class="dot selected"></span><span>Marked</span>
+              <span class="dot win"></span><span>Winning line</span>
+            </div>
+            <div>
+              <strong>Pro tip</strong>
+              <p class="subtitle" style="margin-top:6px">Use Fullscreen for a clean display on the big screen.</p>
+            </div>
+          </aside>
+        </div>
+
+        <div class="status" aria-live="polite" aria-atomic="true">
+          <div id="statusText">No bingo yet. Keep listening...</div>
+          <div><span id="bingoCount" class="bingo">0</span> lines</div>
+        </div>
+      </main>
+
+      <footer class="subtitle">Built for fun. No tracking, no ads, works offline.</footer>
+    </div>
+
+    <script>
+      const BOARD_SIZE = 5;
+      const CENTER_INDEX = Math.floor((BOARD_SIZE * BOARD_SIZE) / 2);
+
+      const BUZZWORDS = [
+        "Strategy", "Vision", "Mission", "North Star", "OKRs",
+        "KPIs", "Operating Model", "Org Design", "Operating Leverage", "Cost Optimization",
+        "Margin Expansion", "Pricing", "Monetization", "Usage-based", "Land and Expand",
+        "Product-Led Growth", "Go-To-Market", "Sales Efficiency", "Pipeline", "Forecast",
+        "Win Rate", "ARR", "MRR", "Net Revenue Retention", "Gross Retention",
+        "Churn", "Expansion", "Upsell", "Cross-sell", "CAC",
+        "LTV", "LTV:CAC", "Payback Period", "Runway", "Burn Rate",
+        "Unit Economics", "Gross Margin", "Contribution Margin", "Cash Flow", "EBITDA",
+        "Rule of 40", "TAM", "SAM", "SOM", "Product-Market Fit",
+        "Moat", "Defensibility", "Network Effects", "Switching Costs", "Scale",
+        "Platform", "Ecosystem", "Marketplace", "Partnerships", "Channel",
+        "Digital Transformation", "AI Strategy", "GenAI", "Automation", "Copilots",
+        "Responsible AI", "AI Governance", "Risk & Compliance", "GRC", "Security",
+        "Cybersecurity", "Zero Trust", "Data Privacy", "GDPR", "CCPA",
+        "Data Governance", "Single Source of Truth", "Customer 360", "Personalization", "Omnichannel",
+        "Cloud", "Hybrid Cloud", "Multi-cloud", "Cloud Spend", "FinOps",
+        "TCO", "ROI", "NPV", "IRR", "Business Case",
+        "Time to Value", "TTV", "Change Management", "Center of Excellence", "COE",
+        "Innovation Pipeline", "Incubate", "Accelerate", "Buy vs Build", "Strategic Bets",
+        "Scenario Planning", "Macro Headwinds", "Regulation", "Antitrust", "Talent",
+        "Hiring", "Retention", "Culture", "DEI", "Remote Work",
+        "Hybrid Work", "Productivity", "Reorg", "Reskilling", "Workforce Transformation",
+        "SLA", "Uptime", "Reliability", "NPS", "CSAT",
+        "Customer Success", "Onboarding", "Adoption", "Reference Customers", "Lighthouse Customer",
+        "Board", "Governance", "Investor Relations", "M&A", "Spin-off",
+        "IPO", "Valuation", "Multiple Expansion", "Guidance", "Brand",
+        "Narrative", "Thought Leadership", "Category Creation", "Competitive Landscape", "Differentiation",
+        "Benchmarking", "Best Practices", "Go-forward Plan", "Roadmap", "Stakeholder Alignment"
+      ];
+
+      const state = {
+        selected: new Set(),
+        winningLines: new Set(),
+        locked: false
+      };
+
+      const shuffle = (array) => {
+        const a = array.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      };
+
+      const makeBoardWords = () => {
+        const pool = shuffle(BUZZWORDS);
+        const words = pool.slice(0, BOARD_SIZE * BOARD_SIZE - 1);
+        words.splice(CENTER_INDEX, 0, "FREE");
+        return words;
+      };
+
+      const renderBoard = () => {
+        const boardEl = document.getElementById('board');
+        boardEl.innerHTML = '';
+        boardEl.style.setProperty('--size', BOARD_SIZE);
+        const words = makeBoardWords();
+        words.forEach((word, index) => {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'tile';
+          button.setAttribute('role', 'gridcell');
+          button.setAttribute('aria-pressed', 'false');
+          button.setAttribute('data-index', String(index));
+          button.title = 'Mark';
+
+          const label = document.createElement('div');
+          label.textContent = word;
+          button.appendChild(label);
+
+          if (index === CENTER_INDEX) {
+            button.classList.add('free');
+            button.setAttribute('aria-label', 'FREE tile');
+            setSelected(index, true, button);
+          }
+
+          button.addEventListener('click', () => toggleTile(button));
+          boardEl.appendChild(button);
+        });
+        updateStatus();
+      };
+
+      const isSelected = (index) => state.selected.has(index);
+
+      const setSelected = (index, value, el) => {
+        if (value) state.selected.add(index); else state.selected.delete(index);
+        if (el) el.setAttribute('aria-pressed', value ? 'true' : 'false');
+      };
+
+      const toggleTile = (el) => {
+        if (state.locked) return;
+        const index = Number(el.getAttribute('data-index'));
+        if (index === CENTER_INDEX) return; // FREE stays marked
+        const nowSelected = !isSelected(index);
+        setSelected(index, nowSelected, el);
+        evaluateBoard();
+      };
+
+      const allLines = () => {
+        const lines = [];
+        for (let r = 0; r < BOARD_SIZE; r++) {
+          lines.push(Array.from({ length: BOARD_SIZE }, (_, c) => r * BOARD_SIZE + c));
+        }
+        for (let c = 0; c < BOARD_SIZE; c++) {
+          lines.push(Array.from({ length: BOARD_SIZE }, (_, r) => r * BOARD_SIZE + c));
+        }
+        lines.push([0, 6, 12, 18, 24]);
+        lines.push([4, 8, 12, 16, 20]);
+        return lines;
+      };
+
+      const evaluateBoard = () => {
+        state.winningLines.clear();
+        const lines = allLines();
+        const boardEl = document.getElementById('board');
+        const tiles = Array.from(boardEl.children);
+        tiles.forEach(t => t.classList.remove('win'));
+
+        lines.forEach((line, lineIdx) => {
+          const win = line.every(i => isSelected(i));
+          if (win) {
+            state.winningLines.add(lineIdx);
+            line.forEach(i => tiles[i].classList.add('win'));
+          }
+        });
+        updateStatus();
+      };
+
+      const updateStatus = () => {
+        const count = state.winningLines.size;
+        const statusText = document.getElementById('statusText');
+        const bingoCount = document.getElementById('bingoCount');
+        bingoCount.textContent = String(count);
+        if (count > 0) {
+          statusText.innerHTML = `<span class="bingo">BINGO!</span> You have ${count} winning ${count === 1 ? 'line' : 'lines'}!`;
+          celebrate();
+        } else {
+          statusText.textContent = 'No bingo yet. Keep listening...';
+        }
+      };
+
+      const celebrate = () => {
+        const header = document.getElementById('header');
+        header.classList.remove('celebrate');
+        void header.offsetWidth;
+        header.classList.add('celebrate');
+      };
+
+      const resetMarks = () => {
+        state.selected = new Set([CENTER_INDEX]);
+        state.winningLines.clear();
+        const tiles = document.querySelectorAll('.tile');
+        tiles.forEach((t, idx) => {
+          const pressed = idx === CENTER_INDEX;
+          t.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+          t.classList.remove('win');
+        });
+        updateStatus();
+      };
+
+      const shuffleBoard = () => {
+        state.selected = new Set();
+        state.winningLines.clear();
+        state.locked = false;
+        renderBoard();
+      };
+
+      const enterFullscreen = async () => {
+        try {
+          if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch (e) {
+          console.warn('Fullscreen not available', e);
+        }
+      };
+
+      const printPage = () => window.print();
+
+      const init = () => {
+        document.getElementById('shuffleBtn').addEventListener('click', shuffleBoard);
+        document.getElementById('resetBtn').addEventListener('click', resetMarks);
+        document.getElementById('fullscreenBtn').addEventListener('click', enterFullscreen);
+        document.getElementById('printBtn').addEventListener('click', printPage);
+        renderBoard();
+      };
+
+      document.addEventListener('DOMContentLoaded', init);
+    </script>
+  </body>
+</html>
+
+
